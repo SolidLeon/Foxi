@@ -1,0 +1,59 @@
+; STRING
+STRING TEST_OK Test successful\n
+STRING TEST_NOK Test failed\n
+STRING END Application Terminated\n
+
+CALL MOV_TEST
+GOTO EOF
+
+; MOV
+:MOV_TEST
+	mov AX 10h
+	mov BX 40h
+	mov CX 10
+	mov DX CX
+
+; ADD
+:ADD_TEST
+
+; SUB
+:SUB_TEST
+
+; PUSH
+:PUSH_TEST
+
+; POP
+:POP_TEST
+
+; GOTO
+:GOTO_TEST
+
+; JZ
+:JZ_TEST
+
+; JNZ
+:JNZ_TEST
+
+; JRNZ
+:JRNZ_TEST
+
+; JRZ
+:JRZ_TEST
+
+; JMP
+:JMP_TEST
+
+; JR
+:JR_TEST
+
+; PRINT
+:PRINT_TEST
+
+; READ
+:READ_TEST
+
+; WRITE
+:WRITE_TEST
+
+:EOF
+:PRINT END

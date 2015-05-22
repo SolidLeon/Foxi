@@ -1,0 +1,18 @@
+STRING START 				Test start\n
+STRING SUBROUTINE 			We are in the subroutine\n
+STRING POST_SUB 			We returned from the subroutine\n
+STRING EOF 					Application Terminated\n
+STRING NOT_TO_BE_PRINTED 	This must not be printed\n
+
+PRINT 	START
+CALL 	MUL
+PRINT 	POST_SUB
+GOTO 	EOF
+
+:MUL
+	PRINT SUBROUTINE
+	RETN
+
+PRINT NOT_TO_BE_PRINTED
+:EOF
+PRINT EOF
