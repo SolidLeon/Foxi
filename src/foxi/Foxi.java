@@ -29,6 +29,7 @@ public class Foxi implements Runnable {
 	private Map<String, ICommand> commands = new HashMap<>();
 	private Map<String, Integer> labels = new HashMap<>();
 	private Map<String, String> strings = new HashMap<>();
+	private List<Integer> setInterrupts = new ArrayList<Integer>();
 	private byte[] memory;
 	
 	private static int F_ZERO = 0x01;
@@ -53,6 +54,23 @@ public class Foxi implements Runnable {
 		register.put("CX", 0);
 		register.put("DX", 0);
 		register.put("F", 0);
+		//VRAM
+		register.put("V0", 0);
+		register.put("V1", 0);
+		register.put("V2", 0);
+		register.put("V3", 0);
+		register.put("V4", 0);
+		register.put("V5", 0);
+		register.put("V6", 0);
+		register.put("V7", 0);
+		register.put("V8", 0);
+		register.put("V9", 0);
+		register.put("VA", 0);
+		register.put("VB", 0);
+		register.put("VC", 0);
+		register.put("VD", 0);
+		register.put("VE", 0);
+		register.put("VF", 0);
 		
 		commands.clear();
 		commands.put("MOV", r -> cbMOV(r));
@@ -74,6 +92,7 @@ public class Foxi implements Runnable {
 		commands.put("WRITE", r -> cbWRITE(r));
 		commands.put("CALL", r -> cbCALL(r));
 		commands.put("RET", r -> cbRETN(r));
+		commands.put("INT", r -> cbINT(r));
 		
 		log("-- REGISTER --");
 		for (String key : register.keySet())
@@ -118,6 +137,17 @@ public class Foxi implements Runnable {
 		
 	}
 
+	private void cbINT(String[] r) {
+		// int value
+		if (r != null && r.length > 0) {
+			String sInterrupt = r[1].trim();
+			int interrupt = parseInt(sInterrupt);
+			if (!setInterrupts.contains(interrupt))
+				setInterrupts.add(interrupt);
+		}
+		
+	}
+
 	private void cbRETN(String[] r) {
 		pop("IP");
 	}
@@ -133,22 +163,55 @@ public class Foxi implements Runnable {
 	}
 
 	private void execute(List<String[]> lines) {
+		// 60 ticks per second
+		// msec | ticks
+		// 1000 | 60
+		//  500 | 30
+		//    1 | 0.06
+		//   17 | 1,02
+		
+		double unprocessed = 0.0;
+		long lastUpdate = System.currentTimeMillis();
 		while (getRegister("IP") < lines.size()) {
-			String[] r = lines.get(getRegister("IP"));
-			setRegister("IP", getRegister("IP") + 1);
-			if (r[0].charAt(0) == ':') {
-				log("SKIP LABEL: " + r[0]);
-			} else {
-				log("EXEC: '" + r[0] + "' (" + r[1] + ")");
-				ICommand cmd = commands.get(r[0]);
-				if (cmd != null)
-					cmd.call(r);
-				else
-					throw new RuntimeException("Unknown command '" + r[0] + "'");
+			long delta = System.currentTimeMillis() - lastUpdate;
+			lastUpdate = System.currentTimeMillis();
+			unprocessed += delta * (60.0 / 1000.0);
+			while (unprocessed > 1.0) {
+				unprocessed -= 1.0;
+				
+				processInterrupt();
+				
+				String[] r = lines.get(getRegister("IP"));
+				setRegister("IP", getRegister("IP") + 1);
+				if (r[0].charAt(0) == ':') {
+					log("SKIP LABEL: " + r[0]);
+				} else {
+					log("EXEC: '" + r[0] + "' (" + r[1] + ")");
+					ICommand cmd = commands.get(r[0]);
+					if (cmd != null)
+						cmd.call(r);
+					else
+						throw new RuntimeException("Unknown command '" + r[0] + "'");
+				}
+			}
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 	}
 	
+	private void processInterrupt() {
+		if (setInterrupts.isEmpty())
+			return;
+		int interrupt = setInterrupts.remove(0);
+		if (interrupt == 0x08) {
+			System.out.println("REPAINT!!!");
+		}
+	}
+
 	private void setRegister(String name, int value) {
 		if (!register.containsKey(name))
 			throw new RuntimeException("Invalid register name '" + name + "'");

@@ -6,6 +6,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * command <arg> <arg> <arg>...
@@ -17,12 +18,18 @@ import java.util.List;
 public class FoxiCompiler implements Runnable {
 	
 	// "RET" -> (parts, cmd, remainder, args) -> parts.add(cmd)
-	
+	interface IAddParts {
+		void addParts(List<String> result, String cmd, String remainder, String[] args);
+	}
+	Map<String, IAddParts> makeParts = new HashMap<>();
 	private String file;
 	public FoxiRuntime runtimeResult;
 	
 	public FoxiCompiler(String file) {
 		this.file = file;
+
+		makeParts.put("RET", (result, cmd, remainder, args) -> result.add(cmd));
+		makeParts.put("PRINT", (result, cmd, remainder, args) -> {result.add(cmd); result.add(remainder);} );
 	}
 	
 	public List<String> parseLines(List<String> lines) {

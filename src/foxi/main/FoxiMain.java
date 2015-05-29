@@ -8,17 +8,17 @@ public class FoxiMain {
 
 	public static void main(String[] args) {
 		
-		FoxiCompiler compiler = new FoxiCompiler("new.fxi");
-		compiler.run();
-		FoxiInterpreter interpreter = new FoxiInterpreter(compiler.runtimeResult);
-		interpreter.run();
+//		FoxiCompiler compiler = new FoxiCompiler("new.fxi");
+//		compiler.run();
+//		FoxiInterpreter interpreter = new FoxiInterpreter(compiler.runtimeResult);
+//		interpreter.run();
 		
-//		String file = null;
-//		if (args != null && args.length > 0) {
-//			file = args[0];
-//		}
-//		file = "test.fxi";
-//		new Thread(new Foxi(file)).start();
+		String file = null;
+		if (args != null && args.length > 0) {
+			file = args[0];
+		}
+		file = "super.fxi";
+		new Thread(new Foxi(file)).start();
 	}
 
 }
