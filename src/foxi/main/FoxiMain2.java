@@ -1,11 +1,28 @@
 package foxi.main;
 
+import java.awt.Canvas;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.image.BufferStrategy;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import javax.imageio.ImageIO;
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 
 public class FoxiMain2 {
 	public static void main(String[] args) {
@@ -21,15 +38,49 @@ public class FoxiMain2 {
 			"MOV %AX DEADh",
 			"MOV %AX %IP",
 			"PUSH %IP",
-			"POP %AX"
+			"POP %AX",
+//			"MOV %BX 00000000h",
+//			"ADD %BX 1",
+//			"WRITE 0 %BX",
+//			"JR -3"
+//			"WRITE 0 ff0000ffh",
+//			"WRITE 1 00ff00ffh",
+//			"WRITE 2 0000ffffh",
+//			"WRITE 3 ffffffffh",
+//			"WRITE 4 000000ffh",
 		};
 		
 		Lexer lexer = new Lexer();
 		Compiler compiler = new Compiler();
-		Framework fw = new Framework(new Register(), new Stack(32), new Memory(32), compiler.compile(lexer.lex(Arrays.asList(commands))));
-		fw.register.newRegister("AX", 0x1234);
-		fw.register.newRegister("IP", 0);
-		fw.register.newRegister("SP", fw.stack.values.length);
+		Framework fw = new Framework(new Register(), new Stack(32), new Memory(800 * 800), compiler.compile(lexer.lex(Arrays.asList(commands))));
+		
+		try (InputStream in = Files.newInputStream(Paths.get("thank_talos_its_fredas.jpg"))) {
+			BufferedImage img = ImageIO.read(in);
+			byte[] pixels = ((DataBufferByte) img.getRaster().getDataBuffer()).getData();;
+			for (int j = 0, i = 0; i < pixels.length && j < fw.memory.memory.length; i += 4, j++) {
+				//RGBA
+				//AARRGGBB
+//				fw.memory.memory[j] = (pixels[i]<<24)&0xff000000
+//						| (pixels[i + 1]<<16)&0x00ff0000
+//						| (pixels[i + 2]<<8)&0x0000ff00
+//						| (pixels[i + 3])&0xff;
+				fw.memory.memory[j] = (pixels[i]&0xff)<<24
+						| (pixels[i + 1]&0xff)<<16
+						| (pixels[i + 2]&0xff)<<8
+						| (pixels[i + 3]&0xff);
+//				fw.memory.memory[j] = (pixels[i]&0xff)<<24
+//						| (pixels[i + 1]&0xff)
+//						| (pixels[i + 2]&0xff)<<8
+//						| (pixels[i + 3]&0xff)<<16;
+			}
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		fw.initialize();
+		
+		SimpleDisplayFrame.open(fw);
 		
 		Thread th = new Thread(new FrameworkRunner(fw, FoxiMain2::next));
 		th.start();
@@ -94,6 +145,55 @@ class Lexer {
 						}
 					}
 				}
+				if ("ADD".equals(words[0])) {
+					ValueType a = getType(words[1]);
+					ValueType b = getType(words[2]);
+					// a must be a register
+					if (a == ValueType.REGISTER) {
+						switch (b) {
+						case REGISTER: result.add(new String[] {"ADDA", stripRegisterPercent(words[1]), stripRegisterPercent(words[2])});
+							break;
+						case VALUE: result.add(new String[] {"ADDB", stripRegisterPercent(words[1]),  "" + toInt(words[2])});
+							break;
+						case VALUE_IN_MEMORY: result.add(new String[] {"ADDC", stripRegisterPercent(words[1]),  "" + toInt(stripMemoryParenthesis(words[2]))});
+							break;
+						}
+					}
+				}
+				if ("WRITE".equals(words[0])) {
+					ValueType a = getType(words[1]); //memory address
+					ValueType b = getType(words[2]); //value
+					if (a == ValueType.REGISTER) {
+						switch (b) {
+						case REGISTER: result.add(new String[] {"WRITEA", stripRegisterPercent(words[1]), stripRegisterPercent(words[2])});
+							break;
+						case VALUE: result.add(new String[] {"WRITEB", stripRegisterPercent(words[1]),  "" + toInt(words[2])});
+							break;
+						case VALUE_IN_MEMORY: result.add(new String[] {"WRITEC", stripRegisterPercent(words[1]),  "" + toInt(stripMemoryParenthesis(words[2]))});
+							break;
+						}
+					}
+					if (a == ValueType.VALUE) {
+						switch (b) {
+						case REGISTER: result.add(new String[] {"WRITED", "" + toInt(words[1]), stripRegisterPercent(words[2])});
+							break;
+						case VALUE: result.add(new String[] {"WRITEE", "" + toInt(words[1]),  "" + toInt(words[2])});
+							break;
+						case VALUE_IN_MEMORY: result.add(new String[] {"WRITEF", "" + toInt(words[1]),  "" + toInt(stripMemoryParenthesis(words[2]))});
+							break;
+						}
+					}
+					if (a == ValueType.VALUE_IN_MEMORY) {
+						switch (b) {
+						case REGISTER: result.add(new String[] {"WRITEG", "" + toInt(stripMemoryParenthesis(words[1])), stripRegisterPercent(words[2])});
+							break;
+						case VALUE: result.add(new String[] {"WRITEH", "" + toInt(stripMemoryParenthesis(words[1])),  "" + toInt(words[2])});
+							break;
+						case VALUE_IN_MEMORY: result.add(new String[] {"WRITEI", "" + toInt(stripMemoryParenthesis(words[1])),  "" + toInt(stripMemoryParenthesis(words[2]))});
+							break;
+						}
+					}
+				}
 				if ("JR".equals(words[0])) {
 					ValueType a = getType(words[1]);
 					switch (a) {
@@ -143,7 +243,7 @@ class Lexer {
 			s = s.substring(0, s.length() - 1);
 			radix = 16;
 		}
-		return Integer.parseInt(s, radix);
+		return (int) Long.parseLong(s, radix);
 	}
 }
 
@@ -165,6 +265,18 @@ class Compiler {
 				if ("PUSHA".equals(words[0])) result.add(new PushCommand(words[1], ValueType.REGISTER));
 				if ("PUSHB".equals(words[0])) result.add(new PushCommand(words[1], ValueType.VALUE));
 				if ("PUSHC".equals(words[0])) result.add(new PushCommand(words[1], ValueType.VALUE_IN_MEMORY));
+				if ("WRITEA".equals(words[0])) result.add(new WriteMemoryCommand(words[1], ValueType.REGISTER, words[2], ValueType.REGISTER));
+				if ("WRITEB".equals(words[0])) result.add(new WriteMemoryCommand(words[1], ValueType.REGISTER, words[2], ValueType.VALUE));
+				if ("WRITEC".equals(words[0])) result.add(new WriteMemoryCommand(words[1], ValueType.REGISTER, words[2], ValueType.VALUE_IN_MEMORY));
+				if ("WRITED".equals(words[0])) result.add(new WriteMemoryCommand(words[1], ValueType.VALUE, words[2], ValueType.REGISTER));
+				if ("WRITEE".equals(words[0])) result.add(new WriteMemoryCommand(words[1], ValueType.VALUE, words[2], ValueType.VALUE));
+				if ("WRITEF".equals(words[0])) result.add(new WriteMemoryCommand(words[1], ValueType.VALUE, words[2], ValueType.VALUE_IN_MEMORY));
+				if ("WRITEG".equals(words[0])) result.add(new WriteMemoryCommand(words[1], ValueType.VALUE_IN_MEMORY, words[2], ValueType.REGISTER));
+				if ("WRITEH".equals(words[0])) result.add(new WriteMemoryCommand(words[1], ValueType.VALUE_IN_MEMORY, words[2], ValueType.VALUE));
+				if ("WRITEI".equals(words[0])) result.add(new WriteMemoryCommand(words[1], ValueType.VALUE_IN_MEMORY, words[2], ValueType.VALUE_IN_MEMORY));
+				if ("ADDA".equals(words[0])) result.add(new AddRegisterCommand(words[1], ValueType.REGISTER, words[2], ValueType.REGISTER));
+				if ("ADDB".equals(words[0])) result.add(new AddRegisterCommand(words[1], ValueType.REGISTER, words[2], ValueType.VALUE));
+				if ("ADDC".equals(words[0])) result.add(new AddRegisterCommand(words[1], ValueType.REGISTER, words[2], ValueType.VALUE_IN_MEMORY));
 			}
 		}
 		return result.toArray(new Command[0]);
@@ -279,9 +391,9 @@ class PushCommand extends Command1Arg {
 
 	@Override
 	public void execute(Framework fw) {
-		int sp = fw.register.get("SP");
+		int sp = fw.getStackPointer();
 		sp -= 1;
-		fw.register.set("SP", sp);
+		fw.setStackPointer(sp);
 		fw.stack.pushDirect(sp, getActual(fw));
 	}
 	
@@ -299,6 +411,32 @@ class WriteRegisterCommand extends Command2Arg {
 	}
 	
 }
+class AddRegisterCommand extends Command2Arg {
+	public AddRegisterCommand(String arg1, ValueType type1, String arg2,
+			ValueType type2) {
+		super(arg1, type1, arg2, type2);
+	}
+
+	@Override
+	public void execute(Framework fw) {
+		int v = fw.register.get(arg1);
+		v += getActual2(fw);
+		fw.register.set(arg1, v);
+	}
+	
+}
+class WriteMemoryCommand extends Command2Arg {
+	public WriteMemoryCommand(String arg1, ValueType type1, String arg2,
+			ValueType type2) {
+		super(arg1, type1, arg2, type2);
+	}
+
+	@Override
+	public void execute(Framework fw) {
+		fw.memory.write(getActual1(fw), getActual2(fw));
+	}
+	
+}
 class JumpRelativeCommand extends Command1Arg {
 	public JumpRelativeCommand(String value, ValueType type) {
 		super(value, type);
@@ -306,11 +444,108 @@ class JumpRelativeCommand extends Command1Arg {
 
 	@Override
 	public void execute(Framework fw) {
-		int ip = fw.register.get("IP");
+		int ip = fw.getInstructionPointer();
 		ip += getActual(fw); //IP points to NEXT command, so if jump 1 it will just skip this next command
-		fw.register.set("IP", ip);
+		fw.setInstructionPointer(ip);
 	}
 }
+
+//DISPALY
+class SimpleDisplayFrame extends JFrame {
+	static SimpleDisplayFrame frm;
+	public static void open(Framework framework) {
+		if (frm != null)
+			return;
+		frm = new SimpleDisplayFrame();
+		frm.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		frm.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent e) {
+				frm.dispose();
+				frm = null;
+			}
+		});
+		Display display = new Display(framework);
+		frm.add(display);
+		frm.pack();
+		frm.setLocationRelativeTo(null);
+		SwingUtilities.invokeLater(() -> frm.setVisible(true));
+		
+		Thread th = new Thread(new Runnable() {
+			@Override
+			public void run() {
+				for (;;) {
+					if (frm == null) break;
+					display.update();
+					try {
+						Thread.sleep(10);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			}
+		}); 
+		th.start();
+	}
+}
+class Display extends Canvas {
+	
+	private Framework framework;
+	private int pixelSize = 1;
+	private int pixelWidth;
+	private int pixelHeight;
+	private int memoryOffset;
+	private BufferStrategy bs;
+	
+	
+	public Display(Framework framework, int pixelWidth, int pixelHeight,
+			int memoryOffset) {
+		super();
+		this.framework = framework;
+		this.pixelWidth = pixelWidth;
+		this.pixelHeight = pixelHeight;
+		this.memoryOffset = memoryOffset;
+		setPreferredSize(new Dimension(pixelWidth * pixelSize, pixelHeight * pixelSize));
+	}
+
+	public Display(Framework framework) {
+		this(framework, 640, 480, 0);
+	}
+
+	public void update() {
+		if (bs == null) {
+			createBufferStrategy(2);
+			bs = getBufferStrategy();
+		}
+		Graphics g = bs.getDrawGraphics();
+
+		int xo = (int) ((getWidth() - pixelWidth * pixelSize) / 2f);
+		int yo = (int) ((getHeight() - pixelHeight * pixelSize) / 2f);
+		g.translate(xo, yo);
+		
+		g.setColor(Color.black);
+		g.fillRect(0, 0, pixelWidth * pixelSize, pixelHeight * pixelSize);
+		
+		for (int y = 0; y < pixelHeight; y++) {
+			for (int x = 0; x < pixelWidth; x++) {
+				int memoryAdress = memoryOffset + (x + y * pixelWidth);
+				int memoryValue = framework.memory.read(memoryAdress);
+				//rgba
+				g.setColor(new Color((memoryValue>>24)&0xff,
+						(memoryValue>>16)&0xff,
+						(memoryValue>>8)&0xff,
+						(memoryValue)&0xff));
+				g.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+			}
+		}
+
+		g.translate(-xo, -yo);
+		bs.show();
+	}
+
+}
+
 
 // FRAMEWORK
 interface INextCommand {
@@ -357,6 +592,30 @@ class Framework {
 		this.stack = stack;
 		this.memory = memory;
 		this.commands = commands;
+	}
+
+	public void initialize() {
+		register.newRegister("AX", 0x1234);
+		register.newRegister("BX", 0);
+		register.newRegister("CX", 0);
+		register.newRegister("DX", 0);
+		register.newRegister("IP", 0);
+		register.newRegister("SP", stack.values.length);
+	}
+
+	public int getStackPointer() {
+		return register.get("SP");
+	}
+
+	public void setStackPointer(int sp) {
+		register.set("SP", sp);
+	}
+	public int getInstructionPointer() {
+		return register.get("IP");
+	}
+
+	public void setInstructionPointer(int ip) {
+		register.set("IP", ip);
 	}
 
 	public Command getCommand(int i) {
@@ -436,6 +695,30 @@ class Memory {
 	
 	public Memory(int size) {
 		memory = new int[size];
+	}
+	
+	public void load(InputStream in) throws IOException {
+		int r, g, b, a;
+		int i = 0;
+		boolean hasAlpha = false;
+		if (hasAlpha) {
+			while ((r = in.read()) != -1 && (g = in.read()) != -1 && (b = in.read()) != -1 && (a = in.read()) != -1) {
+				memory[i++] = (r<<24)&0xff000000 
+						| (g<<16)&0x00ff0000
+						| (b<<8)&0x0000ff00
+						| (a)&0xff;
+				if (i >= memory.length)
+					return;
+			}
+		} else {
+			while ((r = in.read()) != -1 && (g = in.read()) != -1 && (b = in.read()) != -1) {
+				memory[i++] = (r<<24)&0xff00 
+						| (g<<16)&0x00ff00
+						| (b<<8)&0x0000ff;
+				if (i >= memory.length)
+					return;
+			}
+		}
 	}
 
 	public void clear() {
