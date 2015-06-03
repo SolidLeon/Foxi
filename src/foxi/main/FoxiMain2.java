@@ -9,10 +9,8 @@ import java.awt.event.WindowEvent;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.File;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -26,6 +24,13 @@ import javax.swing.SwingUtilities;
 
 public class FoxiMain2 {
 	public static void main(String[] args) {
+		Memory mem = new Memory(0x10000000);
+		File imgFile = new File("C:\\Users\\mma\\Pictures\\test.bmp");
+		VRAMHelper.loadImageIntoMemory(mem, imgFile);
+		SimpleDisplayFrame.open(mem.memory, 640, 480, 0);
+		if (true) return;
+		
+		
 		String[] commands = {
 			";This is a comment",
 			"NOP",
@@ -54,23 +59,7 @@ public class FoxiMain2 {
 		Compiler compiler = new Compiler();
 		Framework fw = new Framework(new Register(), new Stack(32), new Memory(800 * 800 * 2), compiler.compile(lexer.lex(Arrays.asList(commands))));
 
-		int[] data = new int[4 * 6];
-		VRAMHelper.writeARGB(data,  0, 0xffff0000);
-		VRAMHelper.writeARGB(data,  4, 0xff00ff00);
-		VRAMHelper.writeARGB(data,  8, 0xff0000ff);
-		VRAMHelper.writeARGB(data, 12, 0xffffffff);
-		VRAMHelper.writeARGB(data, 16, 0xff000000);
-		VRAMHelper.writeARGB(data, 20, 0xffff00ff);
-		Utils.hexOut(data);
-		System.out.println(Display.getColor(data, 0));
-		System.out.println(Display.getColor(data, 4));
-		System.out.println(Display.getColor(data, 8));
-		System.out.println(Display.getColor(data, 12));
-		System.out.println(Display.getColor(data, 16));
-		System.out.println(Display.getColor(data, 20));
-		SimpleDisplayFrame.open(data, 3, 2, 0);
-		if (true)
-			return;
+		
 		fw.initialize();
 		
 //		SimpleDisplayFrame.open(fw.memory.memory, 8, 8, 0);
@@ -103,13 +92,71 @@ public class FoxiMain2 {
 }
 
 class VRAMHelper {
-	public static void writeARGB(int[] memory, int offset, int argb) {
+	public static int toPackedColorARGB(int a, int r, int g, int b) {
+		return (a&0xff)<<24 | (r&0xff)<<16 | (g&0xff)<<8 | (b&0xff);
+	}
+	
+	public static void loadImageIntoMemory(Memory mem, File imgFile) {
+		try {
+			BufferedImage img = ImageIO.read(imgFile);
+			byte[] pixels = ((DataBufferByte)img.getRaster().getDataBuffer()).getData();
+			
+			System.out.println("PICTURE LOADED '"+imgFile.getAbsolutePath()+"'");
+			System.out.println(VRAMHelper.getImageType(img));
+			System.out.println(img.getColorModel());
+			
+			for (int y = 0; y < img.getHeight(); y++) {
+				for (int x = 0; x < img.getWidth(); x++) {
+					int argb = img.getRGB(x, y);
+					mem.writeDW((x + y * img.getWidth()), argb);
+				}
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+	}
+
+	public static String getImageType(BufferedImage img) {
+		switch (img.getType()) {
+		case BufferedImage.TYPE_3BYTE_BGR:
+			return ("  TYPE_3BYTE_BGR");
+		case BufferedImage.TYPE_4BYTE_ABGR:
+			return("  TYPE_4BYTE_ABGR");
+		case BufferedImage.TYPE_4BYTE_ABGR_PRE:
+			return("  TYPE_4BYTE_ABGR_PRE");
+		case BufferedImage.TYPE_BYTE_BINARY:
+			return("  TYPE_BYTE_BINARY");
+		case BufferedImage.TYPE_BYTE_GRAY:
+			return("  TYPE_BYTE_GRAY");
+		case BufferedImage.TYPE_BYTE_INDEXED:
+			return("  TYPE_BYTE_INDEXED");
+		case BufferedImage.TYPE_CUSTOM:
+			return("  TYPE_CUSTOM");
+		case BufferedImage.TYPE_INT_ARGB:
+			return("  TYPE_INT_ARGB");
+		case BufferedImage.TYPE_INT_ARGB_PRE:
+			return("  TYPE_INT_ARGB_PRE");
+		case BufferedImage.TYPE_INT_BGR:
+			return("  TYPE_INT_BGR");
+		case BufferedImage.TYPE_INT_RGB:
+			return("  TYPE_INT_RGB");
+		case BufferedImage.TYPE_USHORT_555_RGB:
+			return("  TYPE_USHORT_555_RGB");
+		case BufferedImage.TYPE_USHORT_565_RGB:
+			return("  TYPE_USHORT_565_RGB");
+		case BufferedImage.TYPE_USHORT_GRAY:
+			return("  TYPE_USHORT_GRAY");
+		default:
+			return "  TYPE OTHER";
+		}
+	}
+	public static void writeARGB(byte[] memory, int offset, int argb) {
 		if (memory.length < offset + 4)
 			throw new RuntimeException("memory not big enough");
-		memory[offset + 0] = (argb >> 24) & 0xff;
-		memory[offset + 1] = (argb >> 16) & 0xff;
-		memory[offset + 2] = (argb >>  8) & 0xff;
-		memory[offset + 3] = (argb >>  0) & 0xff;
+		memory[offset + 0] = (byte) ((argb >> 24) & 0xff);
+		memory[offset + 1] = (byte) ((argb >> 16) & 0xff);
+		memory[offset + 2] = (byte) ((argb >>  8) & 0xff);
+		memory[offset + 3] = (byte) ((argb >>  0) & 0xff);
 		System.out.printf("%02X  %02X  %02X  %02X%n",
 				memory[offset + 0],
 				memory[offset + 1],
@@ -122,14 +169,18 @@ class Utils {
 	public static void hexOut(int[] data) {
 		StringBuilder sb1 = new StringBuilder();
 		StringBuilder sb2 = new StringBuilder();
-		for (int i = 0; i < data.length; i++) {
+		int i = 0;
+		for (i = 0; i < data.length; i++) {
 			if (i % 0x10 == 0 && sb1.length() > 0) {
-				System.out.printf("%04X:  %64s    %s%n", (i - 0x10), sb1.toString(), sb2.toString());
+				System.out.printf("%04X:  %-64s    %s%n", (i - 0x10), sb1.toString(), sb2.toString());
 				sb1.setLength(0);
 				sb2.setLength(0);
 			}
 			sb1.append(String.format("%02X  ", data[i]));
 			sb2.append(Character.isISOControl((char) data[i]) ? '.' : (char) data[i]);
+		}
+		if (sb1.length() > 0) {
+			System.out.printf("%04X:  %-64s    %s%n", (i - 0x10), sb1.toString(), sb2.toString());
 		}
 	}
 }
@@ -477,13 +528,13 @@ class JumpRelativeCommand extends Command1Arg {
 
 //DISPALY
 class SimpleDisplayFrame extends JFrame {
-	public static SimpleDisplayFrame open(int[] memory, int width, int height, int memoryOffset) {
+	public static SimpleDisplayFrame open(byte[] memory, int width, int height, int memoryOffset) {
 		final SimpleDisplayFrame frm = new SimpleDisplayFrame();
 		frm.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		frm.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
-				frm.dispose();
+				frm.closing = true;
 			}
 		});
 		Display display = new Display(memory, width, height, memoryOffset);
@@ -496,7 +547,8 @@ class SimpleDisplayFrame extends JFrame {
 			@Override
 			public void run() {
 				for (;;) {
-					if (frm == null) break;
+					if (frm.closing)
+						break;
 					display.update();
 					try {
 						Thread.sleep(10);
@@ -505,23 +557,26 @@ class SimpleDisplayFrame extends JFrame {
 						e.printStackTrace();
 					}
 				}
+				frm.dispose();
 			}
 		}); 
 		th.start();
 		return frm;
 	}
+	
+	private boolean closing = false;
 }
 class Display extends Canvas {
 	
-	private int[] memory;
-	private int pixelSize = 8;
+	private byte[] memory;
+	private int pixelSize = 1;
 	private int displayWidth;
 	private int displayHeight;
 	private int memoryOffset;
 	
 	private BufferStrategy bs;
 	
-	public Display(int[] memory, int displayWidth, int displayHeight, int memoryOffset) {
+	public Display(byte[] memory, int displayWidth, int displayHeight, int memoryOffset) {
 		super();
 		this.memory = memory;
 		this.displayWidth = displayWidth;
@@ -536,7 +591,7 @@ class Display extends Canvas {
 		System.out.printf("VRAM %d/%d bytes%n", memoryLength, requiredLength);
 	}
 
-	public Display(int[] memory) {
+	public Display(byte[] memory) {
 		this(memory, 640, 480, 0);
 	}
 
@@ -560,7 +615,7 @@ class Display extends Canvas {
 		for (int y = 0; y < displayHeight; y++) {
 			for (int x = 0; x < displayWidth; x++) {
 				int memoryAdress = memoryOffset + x + y * displayWidth;
-				g.setColor(getColor(memory, memoryAdress));
+				g.setColor(getColor(memory, memoryAdress * 4));
 				g.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
 			}
 		}
@@ -570,9 +625,9 @@ class Display extends Canvas {
 		bs.show();
 	}
 	
-	public static Color getColor(int[] memory, int offset) {
+	public static Color getColor(byte[] memory, int offset) {
 		int memoryAdress = offset;
-		int a = memory[memoryAdress] & 0xff;
+		int a = memory[memoryAdress + 0] & 0xff;
 		int r = memory[memoryAdress + 1] & 0xff;
 		int g = memory[memoryAdress + 2] & 0xff;
 		int b = memory[memoryAdress + 3] & 0xff;
@@ -726,36 +781,13 @@ class Stack {
 }
 
 class Memory {
-	public int[] memory;
+	public byte[] memory;
 	
 	public Memory(int size) {
-		memory = new int[size];
+		memory = new byte[size];
+		System.out.printf("MEMORY: Allocated %d bytes%n", size);
 	}
 	
-	public void load(InputStream in) throws IOException {
-		int r, g, b, a;
-		int i = 0;
-		boolean hasAlpha = false;
-		if (hasAlpha) {
-			while ((r = in.read()) != -1 && (g = in.read()) != -1 && (b = in.read()) != -1 && (a = in.read()) != -1) {
-				memory[i++] = (r<<24)&0xff000000 
-						| (g<<16)&0x00ff0000
-						| (b<<8)&0x0000ff00
-						| (a)&0xff;
-				if (i >= memory.length)
-					return;
-			}
-		} else {
-			while ((r = in.read()) != -1 && (g = in.read()) != -1 && (b = in.read()) != -1) {
-				memory[i++] = (r<<24)&0xff00 
-						| (g<<16)&0x00ff00
-						| (b<<8)&0x0000ff;
-				if (i >= memory.length)
-					return;
-			}
-		}
-	}
-
 	public void clear() {
 		for (int i = 0; i < memory.length; i++)
 			memory[i] = 0;
@@ -766,10 +798,24 @@ class Memory {
 			throw new RuntimeException("Access violation");
 		return memory[pos];
 	}
-	
+
 	public void write(int pos, int value) {
 		if (pos < 0 || pos >= memory.length)
 			throw new RuntimeException("Access violation");
-		memory[pos] = value;
+		memory[pos] = (byte) (value&0xff);
+	}
+	public void writeW(int pos, int value) {
+		if (pos < 0 || pos+1 >= memory.length)
+			throw new RuntimeException("Access violation");
+		memory[pos] = (byte) ((value>>8)&0xff);
+		memory[pos+1] = (byte) (value&0xff);
+	}
+	public void writeDW(int pos, int value) {
+		if (pos < 0 || pos >= memory.length)
+			throw new RuntimeException("Access violation");
+		memory[pos] = (byte) ((value>>24)&0xff);
+		memory[pos+1] = (byte) ((value>>16)&0xff);
+		memory[pos+2] = (byte) ((value>>8)&0xff);
+		memory[pos+3] = (byte) (value&0xff);
 	}
 }
