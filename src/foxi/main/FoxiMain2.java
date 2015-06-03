@@ -25,6 +25,12 @@ import foxi.framework.compiler.Compiler;
 import foxi.framework.gfx.SimpleDisplayFrame;
 import foxi.framework.gfx.VRAMPainter;
 import foxi.framework.lexer.Lexer;
+import foxi.framework.lexer.token.LexerTokenADD;
+import foxi.framework.lexer.token.LexerTokenJR;
+import foxi.framework.lexer.token.LexerTokenMOV;
+import foxi.framework.lexer.token.LexerTokenNOP;
+import foxi.framework.lexer.token.LexerTokenPUSH;
+import foxi.framework.lexer.token.LexerTokenWRITE;
 
 public class FoxiMain2 {
 	static Image getImage(String path) {
@@ -124,6 +130,12 @@ public class FoxiMain2 {
 		};
 		
 		Lexer lexer = new Lexer();
+		lexer.addToken("NOP", new LexerTokenNOP());
+		lexer.addToken("MOV", new LexerTokenMOV());
+		lexer.addToken("JR", new LexerTokenJR());
+		lexer.addToken("PUSH", new LexerTokenPUSH());
+		lexer.addToken("WRITE", new LexerTokenWRITE());
+		lexer.addToken("ADD", new LexerTokenADD());
 		Compiler compiler = new Compiler();
 		Framework fw = new Framework(new Register(), new Stack(32), new Memory(800 * 800 * 2), compiler.compile(lexer.lex(Arrays.asList(commands))));
 
