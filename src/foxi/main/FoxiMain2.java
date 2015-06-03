@@ -83,6 +83,7 @@ public class FoxiMain2 {
 	}
 	public static void main(String[] args) {
 		String[] commands = {
+			// JUST SOME TESTS
 			";This is a comment",
 			"NOP",
 			"MOV %AX 5h",
@@ -95,15 +96,31 @@ public class FoxiMain2 {
 			"MOV %AX %IP",
 			"PUSH %IP",
 			"POP %AX",
-//			"MOV %BX 00000000h",
-//			"ADD %BX 1",
-//			"WRITE 0 %BX",
-//			"JR -3"
-//			"WRITE 0 ff0000ffh",
-//			"WRITE 1 00ff00ffh",
-//			"WRITE 2 0000ffffh",
-//			"WRITE 3 ffffffffh",
-//			"WRITE 4 000000ffh",
+			
+			// INITIALIZE BX as alpha color register
+			"MOV %BX 00000000h",
+			// PREPARE COLORS
+			"WRITE 0 00h", //A
+			"WRITE 1 ffh", //R
+			"WRITE 2 00h", //G
+			"WRITE 3 00h", //B
+			
+			"WRITE 4 00h", //A
+			"WRITE 5 00h", //R
+			"WRITE 6 ffh", //G
+			"WRITE 7 00h", //B
+
+			"WRITE 8 00h", //A
+			"WRITE 9 00h", //R
+			"WRITE 10 00h", //G
+			"WRITE 11 ffh", //B
+			
+			// LOOP TO CHANGE THE ALPHA VALUE FOR ALL 3 PIXELS
+			"ADD %BX 1",
+			"WRITE 0 %BX",
+			"WRITE 4 %BX",
+			"WRITE 8 %BX",
+			"JR -5"
 		};
 		
 		Lexer lexer = new Lexer();
@@ -113,7 +130,7 @@ public class FoxiMain2 {
 		
 		fw.initialize();
 		
-//		SimpleDisplayFrame.open(fw.memory.memory, 8, 8, 0);
+		SimpleDisplayFrame.open(fw.memory.memory, 8, 8, 0, 8);
 		
 		Thread th = new Thread(new FrameworkRunner(fw, FoxiMain2::next));
 		th.start();
