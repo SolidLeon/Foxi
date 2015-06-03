@@ -4,13 +4,14 @@ import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Image;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.File;
-import java.lang.Thread.UncaughtExceptionHandler;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -19,15 +20,62 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
 
 public class FoxiMain2 {
+	static Image getImage(String path) {
+		try {
+			return ImageIO.read(new File("C:\\Users\\mma\\Pictures\\test.bmp"));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	static JLabel getImageLabel(Image img) {
+		if (img != null)
+			return new JLabel(new ImageIcon(img));
+		return new JLabel("Image N/A");
+	}
+	
+	static Image testImage(byte[] memory) {
+		BufferedImage img = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
+		Graphics g = img.getGraphics();
+		new VRAMPainter().paint(g, memory, 0, 64, 64);
+		g.dispose();
+		return img;
+	}
+	
+	static void open(String title, JLabel lbl) {
+		JFrame frm = new JFrame(title);
+		frm.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		frm.add(lbl);
+		frm.pack();
+		frm.setLocationRelativeTo(null);
+		SwingUtilities.invokeLater(() -> frm.setVisible(true));
+	}
+	
+	// WORKS!!
+	static Image testSome(byte[] memory) {
+		BufferedImage img = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
+		Graphics g2 = img.createGraphics();
+		g2.fillRect(0, 0, img.getWidth(), img.getHeight());
+		new VRAMPainter().paint(g2, memory, 0, img.getWidth(), img.getHeight());
+		g2.dispose();
+		return img;
+	}
+	
 	public static void main(String[] args) {
-		Memory mem = new Memory(0x10000000);
+		Memory mem = new Memory(64 * 64 * 4);
 		File imgFile = new File("C:\\Users\\mma\\Pictures\\test.bmp");
 		VRAMHelper.loadImageIntoMemory(mem, imgFile);
 		SimpleDisplayFrame.open(mem.memory, 640, 480, 0);
+//		open("BufferedImage", getImageLabel(getImage("C:\\Users\\mma\\Pictures\\test.bmp")));
+//		open("VRAM Image", getImageLabel(testImage(mem.memory)));
+//		open("TEST", getImageLabel(testSome(mem.memory)));
 		if (true) return;
 		
 		
@@ -108,7 +156,7 @@ class VRAMHelper {
 			for (int y = 0; y < img.getHeight(); y++) {
 				for (int x = 0; x < img.getWidth(); x++) {
 					int argb = img.getRGB(x, y);
-					mem.writeDW((x + y * img.getWidth()), argb);
+					mem.writeDW((x + y * img.getWidth()) * 4, argb);
 				}
 			}
 		} catch (Exception ex) {
@@ -566,29 +614,48 @@ class SimpleDisplayFrame extends JFrame {
 	
 	private boolean closing = false;
 }
+/**
+ * Takes a memory as VRAM.
+ * Memory pixel data should be stored:
+ * ARGB
+ * Each channel is one byte.
+ * The order is left-to-right, top-to-bottom.
+ * So each pixel row should be following.
+ * Example:
+ * Following image should be drawn:
+ * {0,0} {1,0}
+ * {0,1} {1,1}
+ * 
+ * In memory this should be
+ * {0,0} {1,0} {0,1} {1,1}
+ * ARGB  ARGB  ARGB  ARGB
+ * 
+ * So we would need 16 bytes for this image to be drawn
+ * 
+ * @author MMA
+ *
+ */
 class Display extends Canvas {
 	
+	/** memory from where to draw */
 	private byte[] memory;
-	private int pixelSize = 1;
-	private int displayWidth;
-	private int displayHeight;
+	/** offset in memory where VRAM begins */
 	private int memoryOffset;
-	
-	private BufferStrategy bs;
+	/** size (in pixel) each pixel should be drawn with */
+	private int scale = 2;
+	private VRAMPainter painter = new VRAMPainter();
+	private BufferedImage img;
 	
 	public Display(byte[] memory, int displayWidth, int displayHeight, int memoryOffset) {
 		super();
 		this.memory = memory;
-		this.displayWidth = displayWidth;
-		this.displayHeight = displayHeight;
 		this.memoryOffset = memoryOffset;
-		setPreferredSize(new Dimension(displayWidth * pixelSize, displayHeight * pixelSize));
-		// Test if we have enough memory
-		int memoryLength = memory.length - memoryOffset;
-		int requiredLength = displayWidth * displayHeight * 4;
-		if (memoryLength < requiredLength) 
-			throw new RuntimeException("Not enough VRAM, " + memoryLength + "/" + requiredLength + " bytes");
-		System.out.printf("VRAM %d/%d bytes%n", memoryLength, requiredLength);
+		setPreferredSize(new Dimension(displayWidth * scale, displayHeight * scale));
+		
+		if (memoryOffset < 0 || memoryOffset >= memory.length)
+			throw new RuntimeException("Memory offset out-of-bounds, was " + memoryOffset + " must be within [0," + memory.length + "[");
+		
+		img = new BufferedImage(displayWidth, displayHeight, BufferedImage.TYPE_INT_ARGB);
 	}
 
 	public Display(byte[] memory) {
@@ -602,40 +669,68 @@ class Display extends Canvas {
 			return;
 		}
 		
+		// Draw to buffered image, having the right TYPE (ARGB)
+		// This section is tested and works, but only outside ... why?
+		Graphics g2 = img.createGraphics();
+		g2.fillRect(0, 0, img.getWidth(), img.getHeight());
+		painter.paint(g2, memory, memoryOffset, img.getWidth(), img.getHeight());
+		g2.dispose();
+		
+		// Draw image to back buffer, centered and scaled
 		Graphics g = bs.getDrawGraphics();
 		g.fillRect(0, 0, getWidth(), getHeight());
 
-		int xo = (int) ((getWidth() - displayWidth * pixelSize) / 2f);
-		int yo = (int) ((getHeight() - displayHeight * pixelSize) / 2f);
+		int xo = (int) ((getWidth() - img.getWidth() * scale) / 2f);
+		int yo = (int) ((getHeight() - img.getHeight() * scale) / 2f);
 		g.translate(xo, yo);
 		
-		g.setColor(Color.black);
-		g.fillRect(0, 0, displayWidth * pixelSize, displayHeight * pixelSize);
-		
-		for (int y = 0; y < displayHeight; y++) {
-			for (int x = 0; x < displayWidth; x++) {
-				int memoryAdress = memoryOffset + x + y * displayWidth;
-				g.setColor(getColor(memory, memoryAdress * 4));
-				g.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
-			}
-		}
+		g.drawImage(img, 0, 0, img.getWidth() * scale, img.getHeight() * scale, null);
 		
 		g.translate(-xo, -yo);
 		g.dispose();
 		bs.show();
 	}
 	
-	public static Color getColor(byte[] memory, int offset) {
-		int memoryAdress = offset;
-		int a = memory[memoryAdress + 0] & 0xff;
-		int r = memory[memoryAdress + 1] & 0xff;
-		int g = memory[memoryAdress + 2] & 0xff;
-		int b = memory[memoryAdress + 3] & 0xff;
-		return new Color(r, g, b, a);
-	}
 
 }
 
+class VRAMPainter {
+	public void paint(Graphics g, byte[] memory, int offset, int width, int height) {
+		outer: for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
+				int memoryAdress = toMemoryAdress(x, y, offset, width);
+				//We reached the end of our VRAM, so end here
+				if (memoryAdress >= memory.length)
+					break outer;
+				g.setColor(getColor(memory, memoryAdress));
+				g.fillRect(x, y, 1, 1);
+			}
+		}
+		
+	}
+	
+	public static int toMemoryAdress(int x, int y, int offset, int width) {
+		return offset + x + y * width;
+	}
+	
+	/**
+	 * Creates a color from the 4 bytes at 
+	 * A  offset
+	 * R  offset + 1
+	 * G  offset + 2
+	 * B  offset + 3
+	 * @param memory
+	 * @param offset
+	 * @return Color
+	 */
+	public static Color getColor(byte[] memory, int offset) {
+		int a = memory[offset + 0] & 0xff;
+		int r = memory[offset + 1] & 0xff;
+		int g = memory[offset + 2] & 0xff;
+		int b = memory[offset + 3] & 0xff;
+		return new Color(r, g, b, a);
+	}
+}
 
 // FRAMEWORK
 interface INextCommand {
