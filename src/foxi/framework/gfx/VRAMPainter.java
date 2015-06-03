@@ -9,13 +9,12 @@ public class VRAMPainter {
 			for (int x = 0; x < width; x++) {
 				int memoryAdress = toMemoryAdress(x, y, offset, width);
 				//We reached the end of our VRAM, so end here
-				if (memoryAdress >= memory.length)
+				if (memoryAdress + 4 >= memory.length)
 					break outer;
 				g.setColor(getColor(memory, memoryAdress));
 				g.fillRect(x, y, 1, 1);
 			}
 		}
-		
 	}
 	
 	public static int toMemoryAdress(int x, int y, int offset, int width) {

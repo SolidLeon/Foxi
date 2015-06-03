@@ -18,6 +18,18 @@ public class Memory {
 			throw new RuntimeException("Access violation");
 		return memory[pos];
 	}
+	
+	public int readW(int pos) {
+		if (pos < 0 || pos+1 >= memory.length)
+			throw new RuntimeException("Access violation");
+		return (memory[pos]&0xff)<<8 | (memory[pos + 1]&0xff);
+	}
+	
+	public int readDW(int pos) {
+		if (pos < 0 || pos+3 >= memory.length)
+			throw new RuntimeException("Access violation");
+		return (memory[pos]&0xff)<<24 | (memory[pos + 1]&0xff)<<16 | (memory[pos + 2]&0xff)<<8 | (memory[pos + 3]&0xff);
+	}
 
 	public void write(int pos, int value) {
 		if (pos < 0 || pos >= memory.length)
@@ -31,9 +43,9 @@ public class Memory {
 		memory[pos+1] = (byte) (value&0xff);
 	}
 	public void writeDW(int pos, int value) {
-		if (pos < 0 || pos >= memory.length)
+		if (pos < 0 || pos+3 >= memory.length)
 			throw new RuntimeException("Access violation");
-		memory[pos] = (byte) ((value>>24)&0xff);
+		memory[pos+0] = (byte) ((value>>24)&0xff);
 		memory[pos+1] = (byte) ((value>>16)&0xff);
 		memory[pos+2] = (byte) ((value>>8)&0xff);
 		memory[pos+3] = (byte) (value&0xff);

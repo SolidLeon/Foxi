@@ -38,20 +38,20 @@ public class Display extends Canvas {
 	private VRAMPainter painter = new VRAMPainter();
 	private BufferedImage img;
 	
-	public Display(byte[] memory, int displayWidth, int displayHeight, int memoryOffset) {
+	public Display(byte[] memory, int width, int height, int memoryOffset, int scale) {
 		super();
 		this.memory = memory;
 		this.memoryOffset = memoryOffset;
-		setPreferredSize(new Dimension(displayWidth * scale, displayHeight * scale));
+		this.scale = scale;
+		
+		System.out.printf("DISPLAY created, memory size=%d,  w=%d,  h=%d,  off=%d,  scale=%d%n", memory.length, width, height, memoryOffset, scale);
+		
+		setPreferredSize(new Dimension(width * scale, height * scale));
 		
 		if (memoryOffset < 0 || memoryOffset >= memory.length)
 			throw new RuntimeException("Memory offset out-of-bounds, was " + memoryOffset + " must be within [0," + memory.length + "[");
 		
-		img = new BufferedImage(displayWidth, displayHeight, BufferedImage.TYPE_INT_ARGB);
-	}
-
-	public Display(byte[] memory) {
-		this(memory, 640, 480, 0);
+		img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 	}
 
 	public void update() {

@@ -70,10 +70,13 @@ public class FoxiMain2 {
 	}
 	
 	public static void main(String[] args) {
-		Memory mem = new Memory(64 * 64 * 4);
+		Memory mem = new Memory(3 * 4);
 		File imgFile = new File("C:\\Users\\mma\\Pictures\\test.bmp");
-		VRAMHelper.loadImageIntoMemory(mem, imgFile);
-		SimpleDisplayFrame.open(mem.memory, 640, 480, 0);
+//		VRAMHelper.loadImageIntoMemory(mem, imgFile);
+		mem.writeDW(0, 0xffff0000);
+		mem.writeDW(4, 0xff00ff00);
+		mem.writeDW(8, 0xff0000ff);
+		SimpleDisplayFrame.open(mem.memory, 3, 1, 0, 64);
 //		open("BufferedImage", getImageLabel(getImage("C:\\Users\\mma\\Pictures\\test.bmp")));
 //		open("VRAM Image", getImageLabel(testImage(mem.memory)));
 //		open("TEST", getImageLabel(testSome(mem.memory)));

@@ -8,7 +8,7 @@ import javax.swing.SwingUtilities;
 
 //DISPALY
 public class SimpleDisplayFrame extends JFrame {
-	public static SimpleDisplayFrame open(byte[] memory, int width, int height, int memoryOffset) {
+	public static SimpleDisplayFrame open(byte[] memory, int width, int height, int memoryOffset, int scale) {
 		final SimpleDisplayFrame frm = new SimpleDisplayFrame();
 		frm.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		frm.addWindowListener(new WindowAdapter() {
@@ -17,7 +17,7 @@ public class SimpleDisplayFrame extends JFrame {
 				frm.closing = true;
 			}
 		});
-		Display display = new Display(memory, width, height, memoryOffset);
+		Display display = new Display(memory, width, height, memoryOffset, scale);
 		frm.add(display);
 		frm.pack();
 		frm.setLocationRelativeTo(null);
