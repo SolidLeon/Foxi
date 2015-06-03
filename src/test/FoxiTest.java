@@ -17,27 +17,27 @@ public class FoxiTest {
 	}
 	@Test
 	public void testToMemoryAdress2() {
-		assertEquals(1, VRAMPainter.toMemoryAdress(1, 0, 0, 0));
+		assertEquals(4, VRAMPainter.toMemoryAdress(1, 0, 0, 0));
 	}
 	@Test
 	public void testToMemoryAdress3() {
-		assertEquals(2, VRAMPainter.toMemoryAdress(2, 0, 0, 0));
+		assertEquals(8, VRAMPainter.toMemoryAdress(2, 0, 0, 0));
 	}
 	@Test
 	public void testToMemoryAdress4() {
-		assertEquals(8, VRAMPainter.toMemoryAdress(0, 1, 0, 8));
+		assertEquals(32, VRAMPainter.toMemoryAdress(0, 1, 0, 8));
 	}
 	@Test
 	public void testToMemoryAdress5() {
-		assertEquals(9, VRAMPainter.toMemoryAdress(1, 1, 0, 8));
+		assertEquals(36, VRAMPainter.toMemoryAdress(1, 1, 0, 8));
 	}
 	@Test
 	public void testToMemoryAdress6() {
-		assertEquals(10, VRAMPainter.toMemoryAdress(1, 1, 1, 8));
+		assertEquals(40, VRAMPainter.toMemoryAdress(1, 1, 1, 8));
 	}
 	@Test
 	public void testToMemoryAdress7() {
-		assertEquals(18, VRAMPainter.toMemoryAdress(1, 2, 1, 8));
+		assertEquals(72, VRAMPainter.toMemoryAdress(1, 2, 1, 8));
 	}
 
 	@Test
@@ -261,5 +261,61 @@ public class FoxiTest {
 		assertEquals((byte)0x00, memory.read(8 + 2));
 		assertEquals((byte)0xff, memory.read(8 + 3));
 	}
+
+	@Test
+	public void testMemoryFill() {
+		Memory memory = new Memory(8);
+		memory.fill(0, 8, 0xDE);
+		for (int i = 0; i < memory.size(); i++)
+			assertEquals((byte) 0xDE, memory.read(i));
+	}
+	
+	@Test(expected=IllegalArgumentException.class)
+	public void testMemoryFillInvalidOffsetMin() {
+		Memory memory = new Memory(8);
+		memory.fill(-1, 8, 0xDE);
+		for (int i = 0; i < memory.size(); i++)
+			assertEquals(0xDE, memory.read(i));
+	}
+	
+	@Test(expected=IllegalArgumentException.class)
+	public void testMemoryFillInvalidOffsetMax() {
+		Memory memory = new Memory(8);
+		memory.fill(8, 8, 0xDE);
+		for (int i = 0; i < memory.size(); i++)
+			assertEquals(0xDE, memory.read(i));
+	}
+	
+	@Test(expected=IllegalArgumentException.class)
+	public void testMemoryFillInvalidLenMin() {
+		Memory memory = new Memory(8);
+		memory.fill(0, -1, 0xDE);
+		for (int i = 0; i < memory.size(); i++)
+			assertEquals(0xDE, memory.read(i));
+	}
+
+	@Test(expected=IllegalArgumentException.class)
+	public void testMemoryFillInvalidLenMax() {
+		Memory memory = new Memory(8);
+		memory.fill(0, 12, 0xDE);
+		for (int i = 0; i < memory.size(); i++)
+			assertEquals(0xDE, memory.read(i));
+	}
+	@Test(expected=IllegalArgumentException.class)
+	public void testMemoryFillInvalidoffsetLen() {
+		Memory memory = new Memory(8);
+		memory.fill(7, 2, 0xDE);
+		for (int i = 0; i < memory.size(); i++)
+			assertEquals(0xDE, memory.read(i));
+	}
+	
+	@Test
+	public void testMemoryFillWrapper() {
+		Memory memory = new Memory(8);
+		memory.fill(0, 0xDE);
+		for (int i = 0; i < memory.size(); i++)
+			assertEquals((byte)0xDE, memory.read(i));
+	}
+	
 	
 }

@@ -50,4 +50,24 @@ public class Memory {
 		memory[pos+2] = (byte) ((value>>8)&0xff);
 		memory[pos+3] = (byte) (value&0xff);
 	}
+
+	public int size() {
+		return memory.length;
+	}
+
+	public void fill(int off, int len, int value) {
+		if (off < 0 || off >= size())
+			throw new IllegalArgumentException("Invalid offset");
+		if (len < 0 || len > size())
+			throw new IllegalArgumentException("Invalid len");
+		if (off + (len-1) >= size())
+			throw new IllegalArgumentException("Invalid offset and length");
+		for (int i = off; i < off+len; i++) {
+			memory[i] = (byte) (value&0xff);
+		}
+	}
+	
+	public void fill(int off, int value) {
+		fill(off, size(), value);
+	}
 }
