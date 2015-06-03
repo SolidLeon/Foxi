@@ -19,7 +19,6 @@ import foxi.framework.FrameworkRunner;
 import foxi.framework.Memory;
 import foxi.framework.Register;
 import foxi.framework.Stack;
-import foxi.framework.VRAMHelper;
 import foxi.framework.command.Command;
 import foxi.framework.compiler.Compiler;
 import foxi.framework.gfx.SimpleDisplayFrame;
