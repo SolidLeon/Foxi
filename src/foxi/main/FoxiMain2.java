@@ -52,35 +52,28 @@ public class FoxiMain2 {
 		
 		Lexer lexer = new Lexer();
 		Compiler compiler = new Compiler();
-		Framework fw = new Framework(new Register(), new Stack(32), new Memory(800 * 800), compiler.compile(lexer.lex(Arrays.asList(commands))));
-		
-		try (InputStream in = Files.newInputStream(Paths.get("thank_talos_its_fredas.jpg"))) {
-			BufferedImage img = ImageIO.read(in);
-			byte[] pixels = ((DataBufferByte) img.getRaster().getDataBuffer()).getData();;
-			for (int j = 0, i = 0; i < pixels.length && j < fw.memory.memory.length; i += 4, j++) {
-				//RGBA
-				//AARRGGBB
-//				fw.memory.memory[j] = (pixels[i]<<24)&0xff000000
-//						| (pixels[i + 1]<<16)&0x00ff0000
-//						| (pixels[i + 2]<<8)&0x0000ff00
-//						| (pixels[i + 3])&0xff;
-				fw.memory.memory[j] = (pixels[i]&0xff)<<24
-						| (pixels[i + 1]&0xff)<<16
-						| (pixels[i + 2]&0xff)<<8
-						| (pixels[i + 3]&0xff);
-//				fw.memory.memory[j] = (pixels[i]&0xff)<<24
-//						| (pixels[i + 1]&0xff)
-//						| (pixels[i + 2]&0xff)<<8
-//						| (pixels[i + 3]&0xff)<<16;
-			}
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		
+		Framework fw = new Framework(new Register(), new Stack(32), new Memory(800 * 800 * 2), compiler.compile(lexer.lex(Arrays.asList(commands))));
+
+		int[] data = new int[4 * 6];
+		VRAMHelper.writeARGB(data,  0, 0xffff0000);
+		VRAMHelper.writeARGB(data,  4, 0xff00ff00);
+		VRAMHelper.writeARGB(data,  8, 0xff0000ff);
+		VRAMHelper.writeARGB(data, 12, 0xffffffff);
+		VRAMHelper.writeARGB(data, 16, 0xff000000);
+		VRAMHelper.writeARGB(data, 20, 0xffff00ff);
+		Utils.hexOut(data);
+		System.out.println(Display.getColor(data, 0));
+		System.out.println(Display.getColor(data, 4));
+		System.out.println(Display.getColor(data, 8));
+		System.out.println(Display.getColor(data, 12));
+		System.out.println(Display.getColor(data, 16));
+		System.out.println(Display.getColor(data, 20));
+		SimpleDisplayFrame.open(data, 3, 2, 0);
+		if (true)
+			return;
 		fw.initialize();
 		
-		SimpleDisplayFrame.open(fw);
+//		SimpleDisplayFrame.open(fw.memory.memory, 8, 8, 0);
 		
 		Thread th = new Thread(new FrameworkRunner(fw, FoxiMain2::next));
 		th.start();
@@ -106,6 +99,38 @@ public class FoxiMain2 {
 		fw.register.set("IP", ip + 1);
 		return fw.getCommand(ip);
 		
+	}
+}
+
+class VRAMHelper {
+	public static void writeARGB(int[] memory, int offset, int argb) {
+		if (memory.length < offset + 4)
+			throw new RuntimeException("memory not big enough");
+		memory[offset + 0] = (argb >> 24) & 0xff;
+		memory[offset + 1] = (argb >> 16) & 0xff;
+		memory[offset + 2] = (argb >>  8) & 0xff;
+		memory[offset + 3] = (argb >>  0) & 0xff;
+		System.out.printf("%02X  %02X  %02X  %02X%n",
+				memory[offset + 0],
+				memory[offset + 1],
+				memory[offset + 2],
+				memory[offset + 3]);
+	}
+}
+
+class Utils {
+	public static void hexOut(int[] data) {
+		StringBuilder sb1 = new StringBuilder();
+		StringBuilder sb2 = new StringBuilder();
+		for (int i = 0; i < data.length; i++) {
+			if (i % 0x10 == 0 && sb1.length() > 0) {
+				System.out.printf("%04X:  %64s    %s%n", (i - 0x10), sb1.toString(), sb2.toString());
+				sb1.setLength(0);
+				sb2.setLength(0);
+			}
+			sb1.append(String.format("%02X  ", data[i]));
+			sb2.append(Character.isISOControl((char) data[i]) ? '.' : (char) data[i]);
+		}
 	}
 }
 
@@ -452,20 +477,16 @@ class JumpRelativeCommand extends Command1Arg {
 
 //DISPALY
 class SimpleDisplayFrame extends JFrame {
-	static SimpleDisplayFrame frm;
-	public static void open(Framework framework) {
-		if (frm != null)
-			return;
-		frm = new SimpleDisplayFrame();
+	public static SimpleDisplayFrame open(int[] memory, int width, int height, int memoryOffset) {
+		final SimpleDisplayFrame frm = new SimpleDisplayFrame();
 		frm.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		frm.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
 				frm.dispose();
-				frm = null;
 			}
 		});
-		Display display = new Display(framework);
+		Display display = new Display(memory, width, height, memoryOffset);
 		frm.add(display);
 		frm.pack();
 		frm.setLocationRelativeTo(null);
@@ -487,61 +508,75 @@ class SimpleDisplayFrame extends JFrame {
 			}
 		}); 
 		th.start();
+		return frm;
 	}
 }
 class Display extends Canvas {
 	
-	private Framework framework;
-	private int pixelSize = 1;
-	private int pixelWidth;
-	private int pixelHeight;
+	private int[] memory;
+	private int pixelSize = 8;
+	private int displayWidth;
+	private int displayHeight;
 	private int memoryOffset;
+	
 	private BufferStrategy bs;
 	
-	
-	public Display(Framework framework, int pixelWidth, int pixelHeight,
-			int memoryOffset) {
+	public Display(int[] memory, int displayWidth, int displayHeight, int memoryOffset) {
 		super();
-		this.framework = framework;
-		this.pixelWidth = pixelWidth;
-		this.pixelHeight = pixelHeight;
+		this.memory = memory;
+		this.displayWidth = displayWidth;
+		this.displayHeight = displayHeight;
 		this.memoryOffset = memoryOffset;
-		setPreferredSize(new Dimension(pixelWidth * pixelSize, pixelHeight * pixelSize));
+		setPreferredSize(new Dimension(displayWidth * pixelSize, displayHeight * pixelSize));
+		// Test if we have enough memory
+		int memoryLength = memory.length - memoryOffset;
+		int requiredLength = displayWidth * displayHeight * 4;
+		if (memoryLength < requiredLength) 
+			throw new RuntimeException("Not enough VRAM, " + memoryLength + "/" + requiredLength + " bytes");
+		System.out.printf("VRAM %d/%d bytes%n", memoryLength, requiredLength);
 	}
 
-	public Display(Framework framework) {
-		this(framework, 640, 480, 0);
+	public Display(int[] memory) {
+		this(memory, 640, 480, 0);
 	}
 
 	public void update() {
+		BufferStrategy bs = getBufferStrategy();
 		if (bs == null) {
 			createBufferStrategy(2);
-			bs = getBufferStrategy();
+			return;
 		}
+		
 		Graphics g = bs.getDrawGraphics();
+		g.fillRect(0, 0, getWidth(), getHeight());
 
-		int xo = (int) ((getWidth() - pixelWidth * pixelSize) / 2f);
-		int yo = (int) ((getHeight() - pixelHeight * pixelSize) / 2f);
+		int xo = (int) ((getWidth() - displayWidth * pixelSize) / 2f);
+		int yo = (int) ((getHeight() - displayHeight * pixelSize) / 2f);
 		g.translate(xo, yo);
 		
 		g.setColor(Color.black);
-		g.fillRect(0, 0, pixelWidth * pixelSize, pixelHeight * pixelSize);
+		g.fillRect(0, 0, displayWidth * pixelSize, displayHeight * pixelSize);
 		
-		for (int y = 0; y < pixelHeight; y++) {
-			for (int x = 0; x < pixelWidth; x++) {
-				int memoryAdress = memoryOffset + (x + y * pixelWidth);
-				int memoryValue = framework.memory.read(memoryAdress);
-				//rgba
-				g.setColor(new Color((memoryValue>>24)&0xff,
-						(memoryValue>>16)&0xff,
-						(memoryValue>>8)&0xff,
-						(memoryValue)&0xff));
+		for (int y = 0; y < displayHeight; y++) {
+			for (int x = 0; x < displayWidth; x++) {
+				int memoryAdress = memoryOffset + x + y * displayWidth;
+				g.setColor(getColor(memory, memoryAdress));
 				g.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
 			}
 		}
-
+		
 		g.translate(-xo, -yo);
+		g.dispose();
 		bs.show();
+	}
+	
+	public static Color getColor(int[] memory, int offset) {
+		int memoryAdress = offset;
+		int a = memory[memoryAdress] & 0xff;
+		int r = memory[memoryAdress + 1] & 0xff;
+		int g = memory[memoryAdress + 2] & 0xff;
+		int b = memory[memoryAdress + 3] & 0xff;
+		return new Color(r, g, b, a);
 	}
 
 }
