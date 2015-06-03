@@ -139,8 +139,15 @@ public class FoxiMain {
 		Compiler compiler = new Compiler();
 		Framework fw = new Framework(new Register(), new Stack(32), new Memory(800 * 800 * 2), compiler.compile(lexer.lex(Arrays.asList(commands))));
 
+
+		fw.register.newRegister("AX", 0x1234);
+		fw.register.newRegister("BX", 0);
+		fw.register.newRegister("CX", 0);
+		fw.register.newRegister("DX", 0);
+		fw.register.newRegister("IP", 0);
+		fw.register.newRegister("SP", fw.stack.size());
+		fw.setPointerNames("IP", "SP");
 		
-		fw.initialize();
 		
 		SimpleDisplayFrame.open(fw.memory.memory, 8, 8, 0, 8);
 		

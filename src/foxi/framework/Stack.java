@@ -29,4 +29,8 @@ public class Stack {
 		if (pos >= values.length) throw new RuntimeException("Stack underflow");
 		return values[pos];
 	}
+
+	public int size() {
+		return values.length;
+	}
 }

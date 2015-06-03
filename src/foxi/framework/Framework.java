@@ -1,5 +1,6 @@
 package foxi.framework;
 
+import sun.java2d.pipe.SpanClipRenderer;
 import foxi.framework.command.Command;
 
 public class Framework {
@@ -7,6 +8,8 @@ public class Framework {
 	public Stack stack;
 	public Memory memory;
 	public Command[] commands;
+	public String stackPointer;
+	public String instructionPointer;
 	
 	public Framework(Register register, Stack stack, Memory memory, Command[] commands) {
 		super();
@@ -16,28 +19,31 @@ public class Framework {
 		this.commands = commands;
 	}
 
-	public void initialize() {
-		register.newRegister("AX", 0x1234);
-		register.newRegister("BX", 0);
-		register.newRegister("CX", 0);
-		register.newRegister("DX", 0);
-		register.newRegister("IP", 0);
-		register.newRegister("SP", stack.values.length);
+	public Framework(String stackPointer, String instructionPointer) {
+		super();
+		this.stackPointer = stackPointer;
+		this.instructionPointer = instructionPointer;
+	}
+
+
+	public void setPointerNames(String instructionPointer, String stackPointer) {
+		this.instructionPointer = instructionPointer;
+		this.stackPointer = stackPointer;
 	}
 
 	public int getStackPointer() {
-		return register.get("SP");
+		return register.get(stackPointer);
 	}
 
 	public void setStackPointer(int sp) {
-		register.set("SP", sp);
+		register.set(stackPointer, sp);
 	}
 	public int getInstructionPointer() {
-		return register.get("IP");
+		return register.get(instructionPointer);
 	}
 
 	public void setInstructionPointer(int ip) {
-		register.set("IP", ip);
+		register.set(instructionPointer, ip);
 	}
 
 	public Command getCommand(int i) {
