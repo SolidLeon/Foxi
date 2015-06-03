@@ -68,8 +68,7 @@ public class FoxiMain2 {
 		g2.dispose();
 		return img;
 	}
-	
-	public static void main(String[] args) {
+	static void imageTest() {
 		Memory mem = new Memory(0x10000000);
 		File imgFile = new File("C:\\Users\\mma\\Pictures\\thank_talos_its_fredas.jpg");
 //		File imgFile = new File("C:\\Users\\mma\\Pictures\\test.bmp");
@@ -81,9 +80,8 @@ public class FoxiMain2 {
 //		open("BufferedImage", getImageLabel(getImage("C:\\Users\\mma\\Pictures\\test.bmp")));
 //		open("VRAM Image", getImageLabel(testImage(mem.memory)));
 //		open("TEST", getImageLabel(testSome(mem.memory)));
-		if (true) return;
-		
-		
+	}
+	public static void main(String[] args) {
 		String[] commands = {
 			";This is a comment",
 			"NOP",
