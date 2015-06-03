@@ -17,6 +17,7 @@ public class VRAMHelper {
 			byte[] pixels = ((DataBufferByte)img.getRaster().getDataBuffer()).getData();
 			
 			System.out.println("PICTURE LOADED '"+imgFile.getAbsolutePath()+"'");
+			System.out.println("  " + img.getWidth() + "x" + img.getHeight());
 			System.out.println(VRAMHelper.getImageType(img));
 			System.out.println(img.getColorModel());
 			

@@ -19,6 +19,7 @@ import foxi.framework.FrameworkRunner;
 import foxi.framework.Memory;
 import foxi.framework.Register;
 import foxi.framework.Stack;
+import foxi.framework.VRAMHelper;
 import foxi.framework.command.Command;
 import foxi.framework.compiler.Compiler;
 import foxi.framework.gfx.SimpleDisplayFrame;
@@ -69,13 +70,14 @@ public class FoxiMain2 {
 	}
 	
 	public static void main(String[] args) {
-		Memory mem = new Memory(3 * 4);
-		File imgFile = new File("C:\\Users\\mma\\Pictures\\test.bmp");
-//		VRAMHelper.loadImageIntoMemory(mem, imgFile);
+		Memory mem = new Memory(0x10000000);
+		File imgFile = new File("C:\\Users\\mma\\Pictures\\thank_talos_its_fredas.jpg");
+//		File imgFile = new File("C:\\Users\\mma\\Pictures\\test.bmp");
+		VRAMHelper.loadImageIntoMemory(mem, imgFile);
 		mem.writeDW(0, 0xffff0000);
 		mem.writeDW(4, 0xff00ff00);
 		mem.writeDW(8, 0xff0000ff);
-		SimpleDisplayFrame.open(mem.memory, 3, 1, 0, 64);
+		SimpleDisplayFrame.open(mem.memory, 580, 485, 0, 1);
 //		open("BufferedImage", getImageLabel(getImage("C:\\Users\\mma\\Pictures\\test.bmp")));
 //		open("VRAM Image", getImageLabel(testImage(mem.memory)));
 //		open("TEST", getImageLabel(testSome(mem.memory)));
