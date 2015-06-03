@@ -1,10 +1,12 @@
-package foxi.framework;
+package foxi.framework.gfx;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.File;
 
 import javax.imageio.ImageIO;
+
+import foxi.framework.components.Memory;
 
 public class VRAMHelper {
 	public static int toPackedColorARGB(int a, int r, int g, int b) {

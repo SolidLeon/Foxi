@@ -1,4 +1,4 @@
-package foxi.framework;
+package foxi.framework.components;
 
 import java.util.HashMap;
 import java.util.Map;

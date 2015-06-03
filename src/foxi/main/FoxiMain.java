@@ -16,13 +16,13 @@ import javax.swing.SwingUtilities;
 
 import foxi.framework.Framework;
 import foxi.framework.FrameworkRunner;
-import foxi.framework.Memory;
-import foxi.framework.Register;
-import foxi.framework.Stack;
-import foxi.framework.VRAMHelper;
 import foxi.framework.command.Command;
 import foxi.framework.compiler.Compiler;
+import foxi.framework.components.Memory;
+import foxi.framework.components.Register;
+import foxi.framework.components.Stack;
 import foxi.framework.gfx.SimpleDisplayFrame;
+import foxi.framework.gfx.VRAMHelper;
 import foxi.framework.gfx.VRAMPainter;
 import foxi.framework.lexer.Lexer;
 import foxi.framework.lexer.token.LexerTokenADD;

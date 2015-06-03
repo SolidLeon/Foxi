@@ -6,7 +6,7 @@ import java.awt.Color;
 
 import org.junit.Test;
 
-import foxi.framework.Memory;
+import foxi.framework.components.Memory;
 import foxi.framework.gfx.VRAMPainter;
 
 public class FoxiTest {

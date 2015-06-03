@@ -1,4 +1,4 @@
-package foxi.framework;
+package foxi.framework.components;
 
 public class Memory {
 	public byte[] memory;

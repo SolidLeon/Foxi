@@ -2,6 +2,9 @@ package foxi.framework;
 
 import sun.java2d.pipe.SpanClipRenderer;
 import foxi.framework.command.Command;
+import foxi.framework.components.Memory;
+import foxi.framework.components.Register;
+import foxi.framework.components.Stack;
 
 public class Framework {
 	public Register register;
