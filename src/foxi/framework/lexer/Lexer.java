@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import foxi.framework.ValueType;
 import foxi.framework.lexer.token.LexerToken;
 
 public class Lexer {
@@ -45,27 +44,4 @@ public class Lexer {
 		return result;
 	}
 	
-	private String stripRegisterPercent(String string) {
-		return string.substring(1);
-	}
-	private String stripMemoryParenthesis(String string) {
-		return string.substring(1, string.length() - 2);
-	}
-
-	private ValueType getType(String s) {
-		if (s.charAt(0) == '(' && s.charAt(s.length() - 1) == ')')
-			return ValueType.VALUE_IN_MEMORY;
-		if (s.charAt(0) == '%')
-			return ValueType.REGISTER;
-		return ValueType.VALUE;
-	}
-	
-	private int toInt(String s) {
-		int radix = 10;
-		if (s.charAt(s.length() - 1) == 'h') {
-			s = s.substring(0, s.length() - 1);
-			radix = 16;
-		}
-		return (int) Long.parseLong(s, radix);
-	}
 }
