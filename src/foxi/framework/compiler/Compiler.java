@@ -14,6 +14,7 @@ import foxi.framework.command.PushCommand;
 import foxi.framework.command.WriteMemoryCommand;
 import foxi.framework.command.WriteRegisterCommand;
 import foxi.framework.compiler.token.CompilerToken;
+import foxi.framework.compiler.token.CompilerTokenNOP;
 
 //COMPILER
 public class Compiler {
@@ -36,5 +37,11 @@ public class Compiler {
 			}
 		}
 		return result.toArray(new Command[0]);
+	}
+
+	public void addToken(String name, CompilerToken token) {
+		if (tokens.containsKey(name))
+			throw new RuntimeException("Compiler token already exists for " + name);
+		tokens.put(name, token);
 	}
 }
