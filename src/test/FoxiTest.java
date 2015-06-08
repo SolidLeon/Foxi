@@ -316,6 +316,12 @@ public class FoxiTest {
 		for (int i = 0; i < memory.size(); i++)
 			assertEquals((byte)0xDE, memory.read(i));
 	}
-	
+
+	@Test
+	public void testByteCode() {
+		byte[] byteCode = {
+			(byte) 0xff	
+		};
+	}
 	
 }

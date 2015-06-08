@@ -22,8 +22,8 @@ public class Command2Arg extends Command {
 	public String toString() {
 		switch (type2) {
 		case REGISTER: 			return String.format("%s %%%s %%%s", super.toString(), arg1, arg2);
-		case VALUE: 			return String.format("%s %%%s %04Xh", super.toString(), arg1, Integer.parseInt(arg2));
-		case VALUE_IN_MEMORY: 	return String.format("%s %%%s (%04Xh)", super.toString(), arg1, Integer.parseInt(arg2));
+		case VALUE: 			return String.format("%s %%%s %02Xh", super.toString(), arg1, (byte)Integer.parseInt(arg2));
+		case VALUE_IN_MEMORY: 	return String.format("%s %%%s (%02Xh)", super.toString(), arg1, (byte)Integer.parseInt(arg2));
 		}
 		return String.format("%s %s %s", super.toString(), arg1, arg2);
 	}
