@@ -7,6 +7,14 @@ public class Register {
 	public Map<String, Integer> registers = new HashMap<>();
 	public boolean createOnAccess = false;
 	
+	public Register() {
+		this(false);
+	}
+	
+	public Register(boolean createOnAccess) {
+		this.createOnAccess = createOnAccess;
+	}
+	
 	public void newRegister(String name, int initialValue) {
 		registers.put(name, initialValue);
 	}

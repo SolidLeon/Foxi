@@ -5,7 +5,6 @@ public class Memory {
 	
 	public Memory(int size) {
 		memory = new byte[size];
-		System.out.printf("MEMORY: Allocated %d bytes%n", size);
 	}
 	
 	public void clear() {
